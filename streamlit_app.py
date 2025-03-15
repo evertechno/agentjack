@@ -1,5 +1,6 @@
 import streamlit as st
 import google.generativeai as genai
+import random  # Import the random module
 
 # Configure the API key securely from Streamlit's secrets
 genai.configure(api_key=st.secrets["GOOGLE_API_KEY"])
@@ -46,7 +47,8 @@ if st.button("Convert Code"):
 
 # Add a fun feature: Show random programming jokes or tips to users
 st.sidebar.header("Fun Extras")
-show_joke = st.sidebar.checkbox("Show Programming Joke")
+# Set the checkbox to be checked by default
+show_joke = st.sidebar.checkbox("Show Programming Joke", value=True)  # Set default to True
 if show_joke:
     jokes = [
         "Why do programmers prefer dark mode? Because the light attracts bugs!",
@@ -54,7 +56,7 @@ if show_joke:
         "A programmer's wife tells him, 'While you’re at it, clean the kitchen.' The programmer replies, 'I’ll clean the kitchen once the kitchen-cleaning algorithm is complete and tested.'",
         "Why don’t programmers like nature? It has too many bugs."
     ]
-    st.sidebar.write(f"**Joke:** {st.random.choice(jokes)}")
+    st.sidebar.write(f"**Joke:** {random.choice(jokes)}")  # Use random.choice() from the random module
 
 # Provide an option for users to download their converted code
 st.sidebar.header("Download Converted Code")
