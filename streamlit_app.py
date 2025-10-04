@@ -7,7 +7,7 @@ from composio import Composio
 from typing import Any, Dict
 
 # ---------------- Page Setup ----------------
-st.set_page_config(page_title="Composio Admin (No Encryption)", layout="wide", page_icon="🔐")
+st.set_page_config(page_title="Composio Admin (Fixed)", layout="wide", page_icon="🔐")
 st.title("🔐 Composio Admin Console")
 
 # ---------------- Load secrets or env ----------------
@@ -46,13 +46,13 @@ if "user_session" not in st.session_state:
     st.session_state["user_session"] = None
 
 # ---------------- Utility funcs ----------------
-def save_connected_account(owner_id: str, provider: str, connected_account_id: str, payload: Dict[str, Any]) -> bool:
+def save_connected_account(user_id: str, provider: str, connected_account_id: str, payload: Dict[str, Any]) -> bool:
     try:
         row = {
-            "owner_id": owner_id,
+            "user_id": user_id,
             "provider": provider,
             "connected_account_id": connected_account_id,
-            "token_encrypted": json.dumps(payload),  # just store raw JSON now
+            "token_encrypted": json.dumps(payload),  # storing raw JSON
             "metadata": payload.get("metadata") if isinstance(payload, dict) else None,
         }
         supabase.table("connected_accounts").insert(row).execute()
@@ -61,11 +61,11 @@ def save_connected_account(owner_id: str, provider: str, connected_account_id: s
         st.error(f"DB insert error: {e}")
         return False
 
-def fetch_connected_accounts(owner_id: str):
+def fetch_connected_accounts(user_id: str):
     try:
         r = supabase.table("connected_accounts")\
-            .select("id, owner_id, provider, connected_account_id, created_at, metadata")\
-            .eq("owner_id", owner_id).execute()
+            .select("id, user_id, provider, connected_account_id, created_at, metadata")\
+            .eq("user_id", user_id).execute()
         return r.data or []
     except Exception as e:
         st.error(f"DB fetch error: {e}")
@@ -131,10 +131,10 @@ st.markdown(f"**Signed in as:** `{user.get('email')}`  •  `user_id: {user_id}`
 query_params = st.query_params
 if query_params:
     connected_account_id = query_params.get("connected_account_id") or query_params.get("connectedAccountId")
-    owner_id_param = query_params.get("owner_id") or query_params.get("ownerId")
+    user_id_param = query_params.get("user_id") or query_params.get("ownerId")
     provider_param = query_params.get("provider")
 
-    if connected_account_id and owner_id_param:
+    if connected_account_id and user_id_param:
         st.sidebar.success("Callback detected — saving connected account...")
         try:
             acct = None
@@ -144,7 +144,7 @@ if query_params:
             except Exception:
                 payload = dict(query_params)
 
-            saved = save_connected_account(owner_id_param, provider_param or "unknown", connected_account_id, payload)
+            saved = save_connected_account(user_id_param, provider_param or "unknown", connected_account_id, payload)
             if saved:
                 st.sidebar.success("Connected account saved.")
         except Exception as e:
@@ -158,12 +158,11 @@ label = st.text_input("Account label (optional)")
 
 if st.button("Start Composio Connect Flow"):
     try:
-        callback_url = f"{APP_PUBLIC_CALLBACK_URL}?owner_id={user_id}&provider={provider_sel}"
+        callback_url = f"{APP_PUBLIC_CALLBACK_URL}?user_id={user_id}&provider={provider_sel}"
         conn_req = composio.connected_accounts.initiate(
             user_id=user_id,
             auth_config_id=COMPOSIO_AUTH_CONFIG_ID,
-            callback_url=callback_url,
-            metadata={"provider": provider_sel, "label": label},
+            callback_url=callback_url
         )
         st.success("Connection initiated.")
         st.markdown(f"[Open authentication]({conn_req.redirect_url})")
