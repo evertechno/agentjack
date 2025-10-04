@@ -1,15 +1,13 @@
 # streamlit_app.py
 import streamlit as st
 import json
-import time
 import os
-from cryptography.fernet import Fernet
 from supabase import create_client, Client
 from composio import Composio
 from typing import Any, Dict
 
 # ---------------- Page Setup ----------------
-st.set_page_config(page_title="Composio Admin (Single-file)", layout="wide", page_icon="🔐")
+st.set_page_config(page_title="Composio Admin (No Encryption)", layout="wide", page_icon="🔐")
 st.title("🔐 Composio Admin Console")
 
 # ---------------- Load secrets or env ----------------
@@ -20,14 +18,13 @@ SUPABASE_URL = get_secret("SUPABASE_URL")
 SUPABASE_KEY = get_secret("SUPABASE_KEY")
 COMPOSIO_API_KEY = get_secret("COMPOSIO_API_KEY")
 COMPOSIO_AUTH_CONFIG_ID = get_secret("COMPOSIO_AUTH_CONFIG_ID")
-ENCRYPTION_KEY = get_secret("ENCRYPTION_KEY")
 APP_PUBLIC_CALLBACK_URL = get_secret("APP_PUBLIC_CALLBACK_URL")
 
-required = [SUPABASE_URL, SUPABASE_KEY, COMPOSIO_API_KEY, COMPOSIO_AUTH_CONFIG_ID, ENCRYPTION_KEY, APP_PUBLIC_CALLBACK_URL]
+required = [SUPABASE_URL, SUPABASE_KEY, COMPOSIO_API_KEY, COMPOSIO_AUTH_CONFIG_ID, APP_PUBLIC_CALLBACK_URL]
 if not all(required):
     st.error(
-        "Missing required secrets. Ensure SUPABASE_URL, SUPABASE_KEY, COMPOSIO_API_KEY, "
-        "COMPOSIO_AUTH_CONFIG_ID, ENCRYPTION_KEY, and APP_PUBLIC_CALLBACK_URL are set."
+        "Missing required secrets. Ensure SUPABASE_URL, SUPABASE_KEY, "
+        "COMPOSIO_API_KEY, COMPOSIO_AUTH_CONFIG_ID, and APP_PUBLIC_CALLBACK_URL are set."
     )
     st.stop()
 
@@ -44,32 +41,18 @@ except Exception as e:
     st.error(f"Failed to init Composio client: {e}")
     st.stop()
 
-# ---------------- Encryption ----------------
-try:
-    fernet = Fernet(ENCRYPTION_KEY)
-except Exception as e:
-    st.error(f"Invalid ENCRYPTION_KEY: {e}. Generate via Fernet.generate_key().decode() and store it.")
-    st.stop()
-
 # ---------------- Session defaults ----------------
 if "user_session" not in st.session_state:
     st.session_state["user_session"] = None
 
 # ---------------- Utility funcs ----------------
-def encrypt_obj(obj: Any) -> str:
-    return fernet.encrypt(json.dumps(obj).encode()).decode()
-
-def decrypt_obj(token: str) -> Any:
-    return json.loads(fernet.decrypt(token.encode()).decode())
-
 def save_connected_account(owner_id: str, provider: str, connected_account_id: str, payload: Dict[str, Any]) -> bool:
     try:
-        token_encrypted = encrypt_obj(payload)
         row = {
             "owner_id": owner_id,
             "provider": provider,
             "connected_account_id": connected_account_id,
-            "token_encrypted": token_encrypted,
+            "token_encrypted": json.dumps(payload),  # just store raw JSON now
             "metadata": payload.get("metadata") if isinstance(payload, dict) else None,
         }
         supabase.table("connected_accounts").insert(row).execute()
