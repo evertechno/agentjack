@@ -1,2 +1,5 @@
 streamlit
-google.generativeai
+supabase
+google-genai
+composio
+cryptography
